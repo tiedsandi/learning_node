@@ -1,0 +1,8 @@
+hello world!
+ups
+┌───────────┬───────────┐
+│ (index)   │ Values    │
+├───────────┼───────────┤
+│ firstName │ 'fachran' │
+│ lastName  │ 'sandi'   │
+└───────────┴───────────┘
