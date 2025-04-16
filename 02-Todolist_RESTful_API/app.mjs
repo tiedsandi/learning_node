@@ -16,8 +16,8 @@ const server = http.createServer((request, response) => {
     service.deleteTodo(request, response);
   }
 
-  response.write("Todolist API");
-  response.end();
+  // response.write("Todolist API");
+  // response.end();
 });
 
 server.listen(3000);
