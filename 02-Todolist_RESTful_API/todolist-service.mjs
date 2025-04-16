@@ -18,6 +18,18 @@ export class TodolistService {
     response.write(this.getJsonTodoList());
     response.end();
   }
+
+  createTodo(request, response) {
+    request.addListener("data", (data) => {
+      const body = JSON.parse(data.toString());
+      //   console.log(body);
+
+      this.todolist.push(body.todo);
+
+      response.write(this.getJsonTodoList());
+      response.end();
+    });
+  }
 }
 
 // export class TodolistService {
