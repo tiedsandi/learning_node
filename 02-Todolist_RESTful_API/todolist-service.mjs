@@ -30,6 +30,18 @@ export class TodolistService {
       response.end();
     });
   }
+  updateTodo(request, response) {
+    request.addListener("data", (data) => {
+      const body = JSON.parse(data.toString());
+
+      if (this.todolist[body.id]) {
+        this.todolist[body.id] = body.todo;
+      }
+
+      response.write(this.getJsonTodoList());
+      response.end();
+    });
+  }
 }
 
 // export class TodolistService {
