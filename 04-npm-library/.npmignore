@@ -1,0 +1,5 @@
+# kalo udah ada gitignore npmignore bisa ga di pakai
+
+.idea
+
+*.log

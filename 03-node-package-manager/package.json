@@ -1,0 +1,33 @@
+{
+  "name": "03-node-package-manager",
+  "version": "1.0.0",
+  "description": "Belajar node js npm",
+  "exports": {
+    ".": "./index.js",
+    "./write": "./write.js"
+  },
+  "homepage": "netlify.fachran-sandi.app",
+  "type": "module",
+  "scripts": {
+    "prestart": "echo 'Before Application Start'",
+    "poststart": "echo 'Before Application Start'",
+    "start": "node index.js",
+    "run": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "programmer",
+    "pzn",
+    "nodejs",
+    "npm"
+  ],
+  "author": "Fachran Sandi",
+  "license": "ISC",
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "04-npm-library": "^1.0.0"
+  },
+  "devDependencies": {
+    "moment": "^2.30.1"
+  }
+}
