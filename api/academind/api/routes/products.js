@@ -1,15 +1,53 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const checkAuth = require("../middleware/check-auth");
+
+const uploadDir = path.join(__dirname, "../../uploads/products");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (
+    file.mimetype === "image/jpeg" ||
+    file.mimetype === "image/jpg" ||
+    file.mimetype === "image/png"
+  ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 5,
+  },
+  fileFilter: fileFilter,
+});
 
 const ProductModel = require("../models/product");
 
 router.get("/", async (req, res, next) => {
   try {
     const products = await ProductModel.find()
-      .select("name price _id createdAt updatedAt")
+      .select("name price _id createdAt productImage updatedAt")
       .exec();
-    console.log(products);
+    // console.log(products);
 
     if (products.length > 0) {
       res.status(200).json({
@@ -19,6 +57,7 @@ router.get("/", async (req, res, next) => {
           return {
             name: product.name,
             price: product.price,
+            productImage: product.productImage,
             _id: product._id,
             created_at: product.createdAt,
             updated_at: product.updatedAt,
@@ -42,42 +81,55 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-router.post("/", async (req, res, next) => {
-  try {
-    const product = new ProductModel({
-      name: req.body.name,
-      price: req.body.price,
-    });
+router.post(
+  "/",
+  checkAuth,
+  upload.single("productImage"),
+  async (req, res, next) => {
+    console.log(req.file);
 
-    const result = await product.save();
+    try {
+      const relativeImagePath = req.file
+        ? path.join("uploads/products", req.file.filename).replace(/\\/g, "/")
+        : null;
 
-    res.status(201).json({
-      message: "Product created successfully",
-      createdProduct: {
-        name: result.name,
-        price: result.price,
-        _id: result._id,
-        request: {
-          type: "GET",
-          url: "http://localhost:3000/products/" + result._id,
+      const product = new ProductModel({
+        name: req.body.name,
+        price: req.body.price,
+        productImage: relativeImagePath,
+      });
+
+      const result = await product.save();
+
+      res.status(201).json({
+        message: "Product created successfully",
+        createdProduct: {
+          name: result.name,
+          price: result.price,
+          productImage: result.productImage,
+          _id: result._id,
+          request: {
+            type: "GET",
+            url: "http://localhost:3000/products/" + result._id,
+          },
         },
-      },
-    });
-  } catch (err) {
-    console.error(err);
+      });
+    } catch (err) {
+      console.error(err);
 
-    if (err.code === 11000) {
-      return res.status(400).json({
-        message: "Product name must be unique",
+      if (err.code === 11000) {
+        return res.status(400).json({
+          message: "Product name must be unique",
+        });
+      }
+
+      res.status(500).json({
+        message: "Failed to create product",
+        error: err.message,
       });
     }
-
-    res.status(500).json({
-      message: "Failed to create product",
-      error: err.message,
-    });
   }
-});
+);
 
 router.get("/:productId", async (req, res, next) => {
   const id = req.params.productId;
@@ -91,7 +143,7 @@ router.get("/:productId", async (req, res, next) => {
 
   try {
     const product = await ProductModel.findById(id)
-      .select("name price _id createdAt updatedAt")
+      .select("name price _id productImage createdAt updatedAt")
       .exec();
     // console.log({ id: product });
 

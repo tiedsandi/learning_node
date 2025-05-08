@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 
 const productRoutes = require("./api/routes/products");
 const orderRoutes = require("./api/routes/orders");
+const userRoutes = require("./api/routes/user");
 
 const mongoUri = `mongodb+srv://user:${process.env.MONGO_ATLAS_PW}@cluster0.dx1mrdp.mongodb.net/academind?retryWrites=true&w=majority`;
 
@@ -16,6 +17,7 @@ mongoose
   .catch((err) => console.error(err));
 
 app.use(morgan("dev"));
+app.use("/uploads", express.static("uploads"));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
@@ -37,6 +39,7 @@ app.use(cors());
 
 app.use("/products", productRoutes);
 app.use("/orders", orderRoutes);
+app.use("/users", userRoutes);
 
 app.use((req, res, next) => {
   const error = new Error("Not found");
