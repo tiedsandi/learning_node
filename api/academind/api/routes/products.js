@@ -6,13 +6,28 @@ const ProductModel = require("../models/product");
 
 router.get("/", async (req, res, next) => {
   try {
-    const products = await ProductModel.find().exec();
+    const products = await ProductModel.find()
+      .select("name price _id createdAt updatedAt")
+      .exec();
     console.log(products);
 
-    if (products.lengths >= 0) {
+    if (products.length > 0) {
       res.status(200).json({
         message: "Handling GET request to /products",
-        data: products,
+        count: products.length,
+        data: products.map((product) => {
+          return {
+            name: product.name,
+            price: product.price,
+            _id: product._id,
+            created_at: product.createdAt,
+            updated_at: product.updatedAt,
+            request: {
+              type: "GET",
+              url: "http://localhost:3000/products/" + product._id,
+            },
+          };
+        }),
       });
     } else {
       res.status(404).json({
@@ -38,7 +53,15 @@ router.post("/", async (req, res, next) => {
 
     res.status(201).json({
       message: "Product created successfully",
-      createdProduct: result,
+      createdProduct: {
+        name: result.name,
+        price: result.price,
+        _id: result._id,
+        request: {
+          type: "GET",
+          url: "http://localhost:3000/products/" + result._id,
+        },
+      },
     });
   } catch (err) {
     console.error(err);
@@ -58,21 +81,29 @@ router.post("/", async (req, res, next) => {
 
 router.get("/:productId", async (req, res, next) => {
   const id = req.params.productId;
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
 
-  // if (!mongoose.Types.ObjectId.isValid(id)) {
-  //   return res.status(400).json({
-  //     message: "Invalid Product ID format",
-  //   });
-  // }
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: "Invalid Product ID format",
+    });
+  }
 
   try {
-    const product = await ProductModel.findById(id).exec();
+    const product = await ProductModel.findById(id)
+      .select("name price _id createdAt updatedAt")
+      .exec();
     // console.log({ id: product });
 
     if (product) {
       res.status(200).json({
         message: "Product found",
         product: product,
+        request: {
+          type: "GET",
+          description: "Get all products",
+          url: `${baseUrl}/products/`,
+        },
       });
     } else {
       res.status(404).json({
@@ -106,7 +137,11 @@ router.patch("/:productId", async (req, res, next) => {
     if (updatedProduct) {
       res.status(200).json({
         message: "Product updated successfully",
-        updatedProduct: updatedProduct,
+        product: updatedProduct,
+        request: {
+          type: "GET",
+          url: "http://localhost:3000/products/" + id,
+        },
       });
     } else {
       res.status(404).json({
@@ -121,13 +156,27 @@ router.patch("/:productId", async (req, res, next) => {
   }
 });
 
-router.delete("/:productId", (req, res, next) => {
+router.delete("/:productId", async (req, res, next) => {
   const id = req.params.productId;
   try {
-    ProductModel.findOneAndDelete({ _id: id }).exec();
-    res.status(200).json({
-      message: "Deleted product!",
-    });
+    const deletedProduct = await ProductModel.findOneAndDelete({
+      _id: id,
+    }).exec();
+
+    if (deletedProduct) {
+      res.status(200).json({
+        message: "Deleted product!",
+        deletedProduct,
+        request: {
+          type: "POST",
+          description: "Create new product",
+          url: "http://localhost:3000/products/",
+          body: { name: "String", price: "Number" },
+        },
+      });
+    } else {
+      res.status(404).json({ message: "Product not found" });
+    }
   } catch (error) {
     res.status(500).json({
       message: "Error retrieving product",
