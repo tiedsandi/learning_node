@@ -5,104 +5,120 @@ const mongoose = require("mongoose");
 const OrderModel = require("../models/order");
 const ProductModel = require("../models/product");
 
-router.get("/", async (req, res, next) => {
-  const baseUrl = `${req.protocol}://${req.get("host")}`;
-
+// GET all orders
+router.get("/", async (req, res) => {
   const orders = await OrderModel.find()
     .select("productId quantity _id")
-    .populate("productId", "name")
+    .populate("productId", "name price")
     .exec();
 
   res.status(200).json({
     message: "Orders were fetched",
     count: orders.length,
-    data: orders.map((order) => {
-      return {
-        productId: order.productId,
-        quantity: order.quantity,
-        _id: order._id,
-        request: {
-          type: "GET",
-          url: `${baseUrl}/orders/` + order._id,
-        },
-      };
-    }),
+    data: orders.map((order) => ({
+      _id: order._id,
+      product: order.productId,
+      quantity: order.quantity,
+      request: {
+        type: "GET",
+        url: `${req.protocol}://${req.get("host")}/orders/${order._id}`,
+      },
+    })),
   });
 });
 
-router.post("/", async (req, res, next) => {
-  const baseUrl = `${req.protocol}://${req.get("host")}`;
+// POST create order
+router.post("/", async (req, res) => {
+  const { productId, quantity } = req.body;
 
-  const product = await ProductModel.findById(req.body.productId);
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return res.status(400).json({ message: "Invalid productId format" });
+  }
+  if (quantity < 1) {
+    return res.status(400).json({ message: "Quantity must be at least 1" });
+  }
 
+  const product = await ProductModel.findById(productId);
   if (!product) {
-    return res.status(404).json({
-      message: "Product not found",
-    });
+    return res.status(404).json({ message: "Product not found" });
   }
 
   const order = new OrderModel({
-    productId: req.body.productId,
-    quantity: req.body.quantity,
+    productId,
+    quantity,
   });
 
   const result = await order.save();
+  await result.populate("productId", "name price");
 
   res.status(201).json({
     message: "Order was created",
     createdOrder: {
-      productId: result.productId,
-      quantity: result.quantity,
       _id: result._id,
+      product: result.productId,
+      quantity: result.quantity,
     },
     request: {
       type: "GET",
-      url: `${baseUrl}/orders/` + result._id,
+      url: `${req.protocol}://${req.get("host")}/orders/${result._id}`,
     },
   });
 });
 
-router.get("/:orderId", async (req, res, next) => {
+// GET order by ID
+router.get("/:orderId", async (req, res) => {
   const id = req.params.orderId;
-  const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid orderId format" });
+  }
 
   const order = await OrderModel.findById(id)
     .select("productId quantity _id")
-    .populate("productId")
+    .populate("productId", "name price")
     .exec();
 
   if (order) {
     res.status(200).json({
-      message: "order found",
-      product: order,
+      message: "Order found",
+      order: {
+        _id: order._id,
+        product: order.productId,
+        quantity: order.quantity,
+      },
       request: {
         type: "GET",
-        description: "Get all order",
-        url: `${baseUrl}/orders/`,
+        description: "Get all orders",
+        url: `${req.protocol}://${req.get("host")}/orders/`,
       },
     });
   } else {
-    res.status(404).json({
-      message: "Order not found",
-    });
+    res.status(404).json({ message: "Order not found" });
   }
 });
 
-router.delete("/:orderId", async (req, res, next) => {
+// DELETE order by ID
+router.delete("/:orderId", async (req, res) => {
   const id = req.params.orderId;
-  const baseUrl = `${req.protocol}://${req.get("host")}`;
-  const deletedOrder = await OrderModel.findOneAndDelete({
-    _id: id,
-  }).exec();
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid orderId format" });
+  }
+
+  const deletedOrder = await OrderModel.findByIdAndDelete(id).exec();
 
   if (deletedOrder) {
     res.status(200).json({
       message: "Deleted order!",
-      deletedOrder,
+      deletedOrder: {
+        _id: deletedOrder._id,
+        product: deletedOrder.productId,
+        quantity: deletedOrder.quantity,
+      },
       request: {
         type: "POST",
-        description: "Create new Order",
-        url: `${baseUrl}/orders/`,
+        description: "Create new order",
+        url: `${req.protocol}://${req.get("host")}/orders/`,
         body: { productId: "ID", quantity: "Number" },
       },
     });

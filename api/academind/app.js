@@ -8,16 +8,12 @@ const mongoose = require("mongoose");
 const productRoutes = require("./api/routes/products");
 const orderRoutes = require("./api/routes/orders");
 
+const mongoUri = `mongodb+srv://user:${process.env.MONGO_ATLAS_PW}@cluster0.dx1mrdp.mongodb.net/academind?retryWrites=true&w=majority`;
+
 mongoose
-  .connect(
-    "mongodb+srv://user:" +
-      process.env.MONGO_ATLAS_PW +
-      "@cluster0.dx1mrdp.mongodb.net/academind?retryWrites=true&w=majority"
-  )
+  .connect(mongoUri)
   .then(() => console.log("MongoDB connected!"))
   .catch((err) => console.error(err));
-
-mongoose.Promise = global.Promise;
 
 app.use(morgan("dev"));
 app.use(express.urlencoded({ extended: false }));
