@@ -1,20 +1,22 @@
 const express = require("express");
-const app = express();
 const morgan = require("morgan");
 const cors = require("cors");
-require("dotenv").config();
-const mongoose = require("mongoose");
+
+const { swaggerUi, specs } = require("./swagger");
 
 const productRoutes = require("./api/routes/products");
 const orderRoutes = require("./api/routes/orders");
 const userRoutes = require("./api/routes/user");
+const errorHandler = require("./api/middleware/errorHandler");
 
-const mongoUri = `mongodb+srv://user:${process.env.MONGO_ATLAS_PW}@cluster0.dx1mrdp.mongodb.net/academind?retryWrites=true&w=majority`;
+const app = express();
 
-mongoose
-  .connect(mongoUri)
-  .then(() => console.log("MongoDB connected!"))
-  .catch((err) => console.error(err));
+// const mongoUri = `mongodb+srv://user:${process.env.MONGO_ATLAS_PW}@cluster0.dx1mrdp.mongodb.net/academind?retryWrites=true&w=majority`;
+
+// mongoose
+//   .connect(mongoUri)
+//   .then(() => console.log("MongoDB connected!"))
+//   .catch((err) => console.error(err));
 
 app.use(morgan("dev"));
 app.use("/uploads", express.static("uploads"));
@@ -37,23 +39,18 @@ app.use(cors());
 //   next();
 // });
 
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
+
 app.use("/products", productRoutes);
 app.use("/orders", orderRoutes);
 app.use("/users", userRoutes);
 
 app.use((req, res, next) => {
-  const error = new Error("Not found");
+  const error = new Error("Route Not found");
   error.status = 404;
   next(error);
 });
 
-app.use((error, req, res, next) => {
-  res.status(error.status || 500);
-  res.json({
-    error: {
-      message: error.message,
-    },
-  });
-});
+app.use(errorHandler);
 
 module.exports = app;
